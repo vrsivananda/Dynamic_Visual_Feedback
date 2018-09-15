@@ -205,7 +205,10 @@ jsPsych.plugins.video = (function() {
     var videoElement = document.getElementById('jspsych-video-player');
     videoElement.style.position = 'absolute';
     videoElement.style.zIndex = '-10';
-    //videoElement.requestFullscreen();
+    
+    
+    var canvasWidth = videoElement.clientWidth;
+    var canvasHeight = videoElement.clientHeight;
     
     
     //Create a canvas element and append it to the DOM
@@ -215,44 +218,56 @@ jsPsych.plugins.video = (function() {
     //Get the context of the canvas so that it can be painted on.
     var ctx = canvas.getContext("2d");
     
-    //Format the canvas
-    var canvasWidth = videoElement.clientWidth;
-    var canvasHeight = videoElement.clientHeight;
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    //canvas.style.position = 'absolute';
-    canvas.style.zIndex = '10';
-    canvas.style.backgroundColor = 'rgba(0,0,0,0)';
+    document.addEventListener("keydown", function(e) {
+      if (e.keyCode == 13) {
+        //Make the video fullscreen
+        if(screenfull.enabled){
+          screenfull.request(videoElement);
+          console.log("screenfull.request-ed");
+        }
+        //Set up the canvas
+        setupCanvas();
+      }//End of if jeyCode == 13
+    }, false);
     
-    //Add mousemove eventListener to the canvas
-    canvas.addEventListener('mousemove', function(evt) {
-      var mousePos = getMousePosition(canvas, evt);
-      mouseX_global = mousePos.x; //Global variable
-      mouseY_global = mousePos.y; //Global variable
-    });
-    
-    
-    //Add mousemove eventListener to the canvas
-    canvas.addEventListener('click', function(evt) {
-      var mousePos = getMousePosition(canvas, evt);
-      mouseX_click = mousePos.x; //Global variable
-      mouseY_click = mousePos.y; //Global variable
+    function setupCanvas(){
       
-      //Calculate the distance from center
-      var distance = Math.sqrt( 
-                      Math.pow(mouseX_click-(canvasWidth/2),2) + 
-                      Math.pow(mouseY_click-(canvasHeight/2),2) 
-                    );
+      //Format the canvas
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      //canvas.style.position = 'absolute';
+      canvas.style.zIndex = '10';
+      canvas.style.backgroundColor = 'rgba(0,0,0,0)';
       
-      //Start if distance less than threshold
-      if(distance <= clickRadius){
-        //Start the video and the recording of trials
-        videoElement.play();
-        animate();
-      }
+      //Add mousemove eventListener to the canvas
+      canvas.addEventListener('mousemove', function(evt) {
+        var mousePos = getMousePosition(canvas, evt);
+        mouseX_global = mousePos.x; //Global variable
+        mouseY_global = mousePos.y; //Global variable
+      });
       
       
-    });
+      //Add mousemove eventListener to the canvas
+      canvas.addEventListener('click', function(evt) {
+        var mousePos = getMousePosition(canvas, evt);
+        mouseX_click = mousePos.x; //Global variable
+        mouseY_click = mousePos.y; //Global variable
+        
+        //Calculate the distance from center
+        var distance = Math.sqrt( 
+                        Math.pow(mouseX_click-(canvasWidth/2),2) + 
+                        Math.pow(mouseY_click-(canvasHeight/2),2) 
+                      );
+        
+        //Start if distance less than threshold
+        if(distance <= clickRadius){
+          //Start the video and the recording of trials
+          videoElement.play();
+          animate();
+        }
+      });
+      
+    }//End of setupCanvas
     
     
     //------------------Fixation Cross before recording data------------------
