@@ -150,14 +150,17 @@ jsPsych.plugins.video = (function() {
 
     // function to end trial when it is time
     var end_trial = function() {
+      
+      //Stop the animation
+      stopDrawing = true;
 
       // gather the data to store for the trial
       var trial_data = {
         stimulus: JSON.stringify(trial.sources),
         frameTime: frameTime,
         frameTimeFromStart: frameTimeFromStart,
-        magnitudes: magnitudes
-        
+        magnitudes: magnitudes,
+        degrees: degrees
       };
 
       // clear the display
@@ -171,10 +174,11 @@ jsPsych.plugins.video = (function() {
     
     //------------------Variable Setup------------------
     
-    //Variables for animation
+    //Variables for animation (Initial values)
     var frameTime = [];
     var frameTimeFromStart = [];
     var magnitudes = [];
+    var degrees = [];
     var stopDrawing = false;
     var previousTimestamp = null;
     var mouseX_global = canvasWidth/2;
@@ -186,19 +190,28 @@ jsPsych.plugins.video = (function() {
     var fixationCross = true;
     var fixationCrossHeight = 20;
     var fixationCrossWidth = 20;
-    var fixationCrossThickness = 3;
-    var fixationCrossColor = "white";
+    var fixationCrossThickness = 2;
+    var fixationCrossOutlineThickness = 2;
+    var fixationCrossBackgroundColor = "white";
+    var fixationCrossOutlineColor = "black";
     
     // Clicking
     var clickRadius = 10;
     
     //Arrow
-    arrowLineWidth = 1;
-    arrowOutlineColor = "white";
-    arrowBackgroundColor = "white";
+    var arrowBodyThickness = 2;
+    var arrowHeadLength = 10;
+    var arrowHeadThickness = 3;
+    var arrowLineWidth = 1;
+    var arrowBackgroundColor = "white";
+    var arrowOutlineColor = "black";
     
 
     //------------------Canvas------------------
+    
+    //Remove the margin from the jssych content
+    var jspsychContentElement = document.getElementById("jspsych-content");
+    jspsychContentElement.style.maxWidth = '100%';
     
     
     //Get the video element
@@ -213,87 +226,57 @@ jsPsych.plugins.video = (function() {
     
     //Create a canvas element and append it to the DOM
     var canvas = document.createElement("canvas");
-    document.getElementById("jspsych-content").appendChild(canvas);
+    jspsychContentElement.appendChild(canvas);
     
     //Get the context of the canvas so that it can be painted on.
     var ctx = canvas.getContext("2d");
     
-    document.addEventListener("keydown", function(e) {
-      if (e.keyCode == 13) {
-        //Make the video fullscreen
-        if(screenfull.enabled){
-          screenfull.request(videoElement);
-          console.log("screenfull.request-ed");
-        }
-        //Set up the canvas
-        setupCanvas();
-      }//End of if jeyCode == 13
-    }, false);
+
     
-    function setupCanvas(){
-      
-      //Format the canvas
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
-      //canvas.style.position = 'absolute';
-      canvas.style.zIndex = '10';
-      canvas.style.backgroundColor = 'rgba(0,0,0,0)';
-      
-      //Add mousemove eventListener to the canvas
-      canvas.addEventListener('mousemove', function(evt) {
-        var mousePos = getMousePosition(canvas, evt);
-        mouseX_global = mousePos.x; //Global variable
-        mouseY_global = mousePos.y; //Global variable
-      });
-      
-      
-      //Add mousemove eventListener to the canvas
-      canvas.addEventListener('click', function(evt) {
-        var mousePos = getMousePosition(canvas, evt);
-        mouseX_click = mousePos.x; //Global variable
-        mouseY_click = mousePos.y; //Global variable
-        
-        //Calculate the distance from center
-        var distance = Math.sqrt( 
-                        Math.pow(mouseX_click-(canvasWidth/2),2) + 
-                        Math.pow(mouseY_click-(canvasHeight/2),2) 
-                      );
-        
-        //Start if distance less than threshold
-        if(distance <= clickRadius){
-          //Start the video and the recording of trials
-          videoElement.play();
-          animate();
-        }
-      });
-      
-    }//End of setupCanvas
+    //Format the canvas
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    //canvas.style.position = 'absolute';
+    canvas.style.zIndex = '10';
+    canvas.style.backgroundColor = 'rgba(0,0,0,0)';
+    
+    //Add mousemove eventListener to the canvas
+    canvas.addEventListener('mousemove', function(evt) {
+      var mousePos = getMousePosition(canvas, evt);
+      mouseX_global = mousePos.x; //Global variable
+      mouseY_global = mousePos.y; //Global variable
+    });
     
     
-    //------------------Fixation Cross before recording data------------------
+    //Add mousemove eventListener to the canvas
+    canvas.addEventListener('click', function(evt) {
+      var mousePos = getMousePosition(canvas, evt);
+      mouseX_click = mousePos.x; //Global variable
+      mouseY_click = mousePos.y; //Global variable
+      
+      //Calculate the distance from center
+      var distance = Math.sqrt( 
+                      Math.pow(mouseX_click-(canvasWidth/2),2) + 
+                      Math.pow(mouseY_click-(canvasHeight/2),2) 
+                    );
+      
+      //Start if distance less than threshold
+      if(distance <= clickRadius){
+        //Start the video and the recording of trials
+        videoElement.play();
+        animate();
+      }
+    });
+    
+    
+    //------Fixation Cross before recording data------
       
     //Draw the fixation cross if we want it
     if(fixationCross === true){
-      
-      //Horizontal line
-      ctx.beginPath();
-      ctx.lineWidth = fixationCrossThickness;
-      ctx.moveTo(canvasWidth/2 - fixationCrossWidth, canvasHeight/2);
-      ctx.lineTo(canvasWidth/2 + fixationCrossWidth, canvasHeight/2);
-      ctx.strokeStyle = fixationCrossColor;
-      ctx.stroke();
-      
-      //Vertical line
-      ctx.beginPath();
-      ctx.lineWidth = fixationCrossThickness;
-      ctx.moveTo(canvasWidth/2, canvasHeight/2 - fixationCrossHeight);
-      ctx.lineTo(canvasWidth/2, canvasHeight/2 + fixationCrossHeight);
-      ctx.strokeStyle = fixationCrossColor;
-      ctx.stroke();
-      
+      drawFixationCross();
     }
     
-    //------------------Arrow------------------
+    //--------Dynamic Feedback---------
     
     //Function to update and draw the arrow
     function updateAndDraw(){
@@ -301,15 +284,119 @@ jsPsych.plugins.video = (function() {
       //Clear the canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
+      
+      //----- Magnitude -----
+      
+      //Transfer to local variables to keep it constant
+      var mouseX_local = mouseX_global;
+      var mouseY_local = mouseY_global;
+      
+      var relativePositionX = mouseX_local-(canvasWidth/2);
+      var relativePositionY = mouseY_local-(canvasHeight/2);
+      
+      //Calculate the magnitude of the arrow
+      var magnitude = Math.sqrt( 
+                        Math.pow(relativePositionX,2) + 
+                        Math.pow(relativePositionY,2) 
+                      );
+      
+      //Push into the magnitudes array
+      magnitudes.push(magnitude);
+      
+      //----- Direction -----
+      
+      /*
+      Directions in degrees are in the form:
+         0: right
+        90: up
+      -180: left
+       -90: down
+      Link to atan image & forum: https://math.stackexchange.com/questions/707673/find-angle-in-degrees-from-one-point-to-another-in-2d-space
+      */
+      
+      //Calculate the degree
+      var degree = Math.atan2(-relativePositionY, relativePositionX) * 180 / Math.PI;
+      //-ve to relativePostionY so that up is +ve and bottom is -ve
+      
+      //Push into the degrees array
+      degrees.push(degree);
+      
+      //----- Arrow -----
+
+      //Draw the arrow
+      ctx.beginPath();
+      ctx.arrow(canvasWidth/2, canvasHeight/2, mouseX_local, mouseY_local, [0, arrowBodyThickness, -arrowHeadLength, arrowBodyThickness, -arrowHeadLength, arrowHeadThickness]);
+      ctx.lineWidth = arrowLineWidth;
+      ctx.fillStyle = arrowBackgroundColor;
+      ctx.fill();
+      ctx.strokeStyle = arrowOutlineColor;
+      ctx.stroke();
+      
+      //----- Fixation Cross -----
+      
       //Draw the fixation cross if we want it
       if(fixationCross === true){
+        drawFixationCross();
+      }
+      
+    }//End of updateAndDraw
+    
+    //Function to draw the fixation cross
+    function drawFixationCross(){
+        
+/*        //------OUTLINES------
+        
+        //Horizontal line
+        ctx.lineWidth = fixationCrossOutlineThickness;
+        ctx.rect(canvasWidth/2 - fixationCrossWidth, 
+                 canvasHeight/2 - fixationCrossThickness,
+                 fixationCrossWidth*2,
+                 fixationCrossThickness*2);
+        ctx.fillStyle = fixationCrossBackgroundColor;
+        ctx.fill();
+        ctx.strokeStyle = fixationCrossOutlineColor;
+        ctx.stroke();
+        
+        //Vertical line
+        ctx.lineWidth = fixationCrossOutlineThickness;
+        ctx.rect(canvasWidth/2 - fixationCrossThickness, 
+                 canvasHeight/2 - fixationCrossWidth,
+                 fixationCrossThickness*2,
+                 fixationCrossWidth*2);
+        ctx.fillStyle = fixationCrossBackgroundColor;
+        ctx.fill();
+        ctx.strokeStyle = fixationCrossOutlineColor;
+        ctx.stroke();
+*/
+        //------Cross over Cross------
+        
+        // ---Bottom Cross---
+        
+        //Horizontal line
+        ctx.beginPath();
+        ctx.lineWidth = fixationCrossThickness+fixationCrossOutlineThickness;
+        ctx.moveTo(canvasWidth/2 - (fixationCrossWidth+fixationCrossOutlineThickness/2), canvasHeight/2);
+        ctx.lineTo(canvasWidth/2 + (fixationCrossWidth+fixationCrossOutlineThickness/2), canvasHeight/2);
+        ctx.strokeStyle = fixationCrossOutlineColor;
+        ctx.stroke();
+        
+        //Vertical line
+        ctx.beginPath();
+        ctx.lineWidth = fixationCrossThickness+fixationCrossOutlineThickness;
+        ctx.moveTo(canvasWidth/2, canvasHeight/2 - (fixationCrossHeight+fixationCrossOutlineThickness/2));
+        ctx.lineTo(canvasWidth/2, canvasHeight/2 + (fixationCrossHeight+fixationCrossOutlineThickness/2));
+        ctx.strokeStyle = fixationCrossOutlineColor;
+        ctx.stroke();
+        
+        
+        // ---Top Cross---
         
         //Horizontal line
         ctx.beginPath();
         ctx.lineWidth = fixationCrossThickness;
         ctx.moveTo(canvasWidth/2 - fixationCrossWidth, canvasHeight/2);
         ctx.lineTo(canvasWidth/2 + fixationCrossWidth, canvasHeight/2);
-        ctx.fillStyle = fixationCrossColor;
+        ctx.strokeStyle = fixationCrossBackgroundColor;
         ctx.stroke();
         
         //Vertical line
@@ -317,32 +404,29 @@ jsPsych.plugins.video = (function() {
         ctx.lineWidth = fixationCrossThickness;
         ctx.moveTo(canvasWidth/2, canvasHeight/2 - fixationCrossHeight);
         ctx.lineTo(canvasWidth/2, canvasHeight/2 + fixationCrossHeight);
-        ctx.fillStyle = fixationCrossColor;
+        ctx.strokeStyle = fixationCrossBackgroundColor;
         ctx.stroke();
-      }
-      
-      
-      
-      //Transfer to local variables to keep it constant
-      var mouseX_local = mouseX_global;
-      var mouseY_local = mouseY_global;
-
-      //Draw the arrow
-      ctx.beginPath();
-      ctx.arrow(canvasWidth/2, canvasHeight/2, mouseX_local, mouseY_local, [0, 1, -10, 1, -10, 5]);
-      ctx.lineWidth = arrowLineWidth;
-      ctx.strokeStyle = arrowOutlineColor;
-      ctx.fillStyle = arrowBackgroundColor;
-      ctx.fill();
-      
-      
-      //Calculate the magnitude of the arrow
-      var magnitude = Math.sqrt( Math.pow(mouseX_local-(canvasWidth/2),2) + Math.pow(mouseY_local-(canvasHeight/2),2) );
-      
-      //Push into the magnitudes array
-      magnitudes.push(magnitude);
-      
-      
+       
+/*        //Horizontal line
+        ctx.beginPath();
+        ctx.lineWidth = fixationCrossThickness;
+        ctx.moveTo(canvasWidth/2 - fixationCrossWidth, canvasHeight/2);
+        ctx.lineTo(canvasWidth/2 + fixationCrossWidth, canvasHeight/2);
+        ctx.fillStyle = fixationCrossBackgroundColor;
+        ctx.fill();
+        ctx.strokeStyle = fixationCrossOutlineColor;
+        ctx.stroke();
+        
+        //Vertical line
+        ctx.beginPath();
+        ctx.lineWidth = fixationCrossThickness;
+        ctx.moveTo(canvasWidth/2, canvasHeight/2 - fixationCrossHeight);
+        ctx.lineTo(canvasWidth/2, canvasHeight/2 + fixationCrossHeight);
+        ctx.fillStyle = fixationCrossBackgroundColor;
+        ctx.fill();
+        ctx.strokeStyle = fixationCrossOutlineColor;
+        ctx.stroke();
+*/      
     }
     
     //Function to get mouse position
