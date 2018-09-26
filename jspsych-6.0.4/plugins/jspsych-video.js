@@ -160,7 +160,9 @@ jsPsych.plugins.video = (function() {
         frameTime: frameTime,
         frameTimeFromStart: frameTimeFromStart,
         magnitudes: magnitudes,
-        degrees: degrees
+        degrees: degrees,
+        height: trial.height,
+        width: trial.width
       };
 
       // clear the display
