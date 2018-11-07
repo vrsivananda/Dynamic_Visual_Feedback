@@ -18,7 +18,7 @@
         type: 'fullscreen',
         message: '<p>The experiment will switch to full screen mode when you press the button below.</p>' + 
             '<p>Click on the center of the fixation cross to play the video and start the data collection.</p>' + 
-            '<p>After 5 seconds, the trial ends and the data will be displayed on your screen.</p>',
+            '<p>After 30 seconds, the trial ends and the data will be displayed on your screen.</p>',
         fullscreen_mode: true
     };
     
@@ -37,7 +37,7 @@
 
     var video_trial = {
         type: 'video',
-        sources: ['milky.mp4'],
+        sources: ['E2 Hang Gliding Rio.mp4'],
         autoplay: false,
         height: function(){
             return windowHeight;
