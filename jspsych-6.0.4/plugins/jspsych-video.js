@@ -313,7 +313,7 @@ jsPsych.plugins.video = (function() {
         90: up
       -180: left
        -90: down
-      Link to atan image & forum: https://math.stackexchange.com/questions/707673/find-angle-in-degrees-from-one-point-to-another-in-2d-space
+      Link to atan2 image & forum: https://math.stackexchange.com/questions/707673/find-angle-in-degrees-from-one-point-to-another-in-2d-space
       */
       
       //Calculate the degree
